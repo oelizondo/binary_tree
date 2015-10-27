@@ -2,6 +2,7 @@ class BST
 {
 	public:
 		BST();
+    BST(BST &nuevoArbol);
 		~BST();
 		bool search(int data);
 		bool add(int data);
@@ -11,6 +12,11 @@ class BST
     int wherelevelIam(int d);
     void ancestros(int d);
     int height();
+    int nearestRelative(int d1, int d2);
+    int maxWidth();
+    nodeT* datasearch(int d);
+    bool operator==(BST &otroArbol);
+    bool isbalanced();
 	private:
 		nodeT *root;
 		void preorden(nodeT *r);
@@ -23,11 +29,27 @@ class BST
 		int countR(nodeT *r);
 		void printLeaves(nodeT *r);
     void nivelxnivel(nodeT *r);
+    void getLeaves(nodeT *r);
+    void clearStack();
+    void treeToStack1(nodeT *r);
+    void treeToStack2(nodeT *r);
+    bool isbalancedPrivate(nodeT *r);
+    priority_queue<int, vector<int>, less<int>> pq1;
+    stack<int> stack1, stack2;
 };
 
 BST::BST()
 {
 	root = NULL;
+}
+
+BST::BST(BST &nuevoArbol) {
+  clearStack();
+  nuevoArbol.treeToStack1(nuevoArbol.root);
+  while (!stack1.empty()) {
+    nuevoArbol.add(nuevoArbol.stack1.top());
+    nuevoArbol.stack1.pop();
+  }
 }
 
 void BST::delAll(nodeT *r)
@@ -45,6 +67,49 @@ BST::~BST()
 	delAll(root);
 }
 
+bool BST::operator==(BST &otroArbol) {
+  if (count() == otroArbol.count()) {
+    treeToStack1(root);
+    treeToStack2(otroArbol.root);
+    while (!stack1.empty()) {
+      if ( stack1.top() == stack2.top() ) {
+        stack1.pop();
+        stack2.pop();
+      }
+      else
+        clearStack();
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+void BST::treeToStack1(nodeT *r) {
+  if (r != NULL)
+  {
+    inorden(r->getLeft());
+    stack1.push(r->getData());
+    inorden(r->getRight());
+  }
+}
+
+void BST::treeToStack2(nodeT *r) {
+  if (r != NULL)
+  {
+    inorden(r->getLeft());
+    stack2.push(r->getData());
+    inorden(r->getRight());
+  }
+}
+
+void BST::clearStack() {
+  while (!stack1.empty() && !stack2.empty()) {
+    stack1.pop();
+    stack2.pop();
+  }
+}
+
 bool BST::search(int data)
 {
 	nodeT *aux = root;
@@ -59,8 +124,16 @@ bool BST::search(int data)
 	return false;
 }
 
-bool BST::add(int data)
-{
+nodeT* BST::datasearch(int d) {
+  nodeT *aux = root;
+  while(aux != NULL) {
+    if ( aux->getData() == d)
+      return aux;
+    aux = (aux->getData() > d) ? aux->getLeft() : aux->getRight();
+  }
+}
+
+bool BST::add(int data) {
 	if (root == NULL)
 	{
 		root = new nodeT(data);
@@ -288,12 +361,75 @@ void BST::ancestros(int d) {
   }
 }
 
-int BST::height() {
-  nodeT *r = root;
-  stack<int> stack1;
+void BST::getLeaves(nodeT *r){
+    if ( r != NULL ) {
+      if ( r -> getLeft() != NULL && r -> getRight() != NULL ) {
+       pq1.push(wherelevelIam(r->getData()));
+      }
+      getLeaves(r->getRight());
+      getLeaves(r->getLeft());
+  }
 }
 
+int BST::height() {
+  getLeaves(root);
+  int h = pq1.top();
+  while(!pq1.empty()){
+    pq1.pop();
+  }
+  return h;
+}
 void BST::nivelxnivel(nodeT *r) {
   queue<int> queue1;
+  r = root;
   queue1.push(r->getData());
+  int valor = 0;
+  while (!queue1.empty()){
+    r = root;
+    int valor = queue1.front();
+    cout << valor << " ";
+
+    while (r->getData() != valor ){
+      r = ( r->getData() > valor) ? r->getLeft() : r->getRight();
+    }
+
+    if ( r -> getRight() != NULL && r -> getLeft() != NULL ) {
+      queue1.pop();
+      queue1.push(r -> getRight() -> getData());
+      queue1.push(r -> getLeft() -> getData());
+    }
+    else if ( r -> getRight() != NULL && r -> getLeft() == NULL ) {
+      queue1.pop();
+      queue1.push(r -> getRight()->getData());
+    }
+    else if ( r -> getRight() == NULL && r -> getLeft() != NULL ) {
+     queue1.pop();
+     queue1.push(r->getLeft()->getData());
+    }
+    else {
+      queue1.pop();
+    }
+  }
+}
+
+int BST::maxWidth() {
+
+}
+
+int BST::nearestRelative(int d1, int d2) {
+  nodeT *aux = root;
+  if (aux->getData() > d1 && aux->getData() > d2){
+    aux = aux -> getLeft();
+    if ( aux -> getData() > d1 && aux->getData() < d2 || aux -> getData() < d1 && aux->getData() > d2 )
+      return aux->getData();
+  }
+  if (aux->getData() < d1 && aux->getData() < d2) {
+    aux = aux->getRight();
+    if ( aux -> getData() > d1 && aux->getData() < d2 || aux -> getData() < d1 && aux->getData() > d2 )
+      return aux->getData();
+  }
+}
+
+bool BST::isbalanced() {
+  return isbalancedPrivate(root);
 }
